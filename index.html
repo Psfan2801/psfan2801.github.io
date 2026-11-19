@@ -11,10 +11,85 @@
     p.subtitle { color: #9ca3af; margin-bottom: 2rem; }
     h2 { font-size: 1.2rem; color: #60a5fa; margin: 1.5rem 0 1rem; border-bottom: 1px solid #262a38; padding-bottom: 0.5rem; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
-    a.card { background: #181b24; border: 1px solid #262a38; border-radius: 12px; padding: 1.25rem; text-decoration: none; color: inherit; transition: transform 0.15s, border-color 0.15s; }
-    a.card:hover { transform: translateY(-3px); border-color: #3b82f6; }
+    a.card, button.card {
+      background: #181b24;
+      border: 1px solid #262a38;
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-decoration: none;
+      color: inherit;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    a.card:hover, button.card:hover { transform: translateY(-3px); border-color: #3b82f6; }
     .card h3 { font-size: 1.1rem; margin-bottom: 0.35rem; }
     .card span { font-size: 0.85rem; color: #9ca3af; }
+
+    /* Modal & Ping Styles */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .modal-box {
+      background: #181b24;
+      color: #f3f4f6;
+      border: 1px solid #262a38;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 460px;
+      padding: 1.5rem;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.35rem;
+    }
+    .modal-header h3 { font-size: 1.2rem; color: #60a5fa; }
+    .modal-sub { color: #9ca3af; font-size: 0.85rem; margin-bottom: 1.25rem; }
+    .modal-actions button {
+      background: #0f1117;
+      color: #d1d5db;
+      border: 1px solid #262a38;
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-left: 0.4rem;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .modal-actions button:hover { border-color: #3b82f6; color: #fff; }
+
+    .proxy-list { display: flex; flex-direction: column; gap: 0.65rem; }
+    .proxy-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #0f1117;
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #f3f4f6;
+      border: 1px solid #262a38;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .proxy-item:hover { border-color: #3b82f6; transform: translateX(2px); }
+    .proxy-info { display: flex; align-items: center; gap: 0.75rem; font-size: 0.95rem; }
+    .proxy-ping { font-size: 0.8rem; color: #9ca3af; font-family: monospace; }
+
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .status-checking { background: #eab308; box-shadow: 0 0 8px #eab308; }
+    .status-up { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .status-down { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
   </style>
 </head>
 <body>
@@ -23,14 +98,18 @@
 
   <h2>Utilities &amp; Emulators</h2>
   <div class="grid">
- <a href="Utilities/Calc/calc.htm" class="card">
-  <h3>Scientific Calculator</h3>
-  <span>DEG / RAD / GRAD math tool</span>
-</a>
-  <a href="Emulators/emulators.htm" class="card">
-  <h3>Emulators</h3>
-  <span>DOS, SNES, GBA, and more</span>
+    <a href="Utilities/Calc/calc.htm" class="card">
+      <h3>Scientific Calculator</h3>
+      <span>DEG / RAD / GRAD math tool</span>
     </a>
+    <a href="Emulators/emulators.htm" class="card">
+      <h3>Emulators</h3>
+      <span>DOS, SNES, GBA, and more</span>
+    </a>
+    <button type="button" class="card" onclick="openLinksModal()">
+      <h3>Links</h3>
+      <span>Proxy links with live status</span>
+    </button>
   </div>
 
   <h2>Games</h2>
@@ -40,5 +119,100 @@
       <span>Browse all hosted web games</span>
     </a>
   </div>
+
+  <!-- Proxy Links Modal -->
+  <div id="linksModal" class="modal-backdrop" onclick="if(event.target === this) closeLinksModal()">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Proxy Links</h3>
+        <div class="modal-actions">
+          <button type="button" onclick="checkAllLinks()">↻ Re-ping</button>
+          <button type="button" onclick="closeLinksModal()">✕</button>
+        </div>
+      </div>
+      <p class="modal-sub">Green = reachable, Red = down or blocked.</p>
+      <div id="proxyList" class="proxy-list"></div>
+    </div>
+  </div>
+
+  <script>
+    // Add or edit your proxy links here
+    const proxyLinks = [
+      { name: "Proxy Link 1", url: "https://example.com" },
+      { name: "Proxy Link 2", url: "https://example.org" },
+      { name: "Proxy Link 3", url: "https://this-domain-does-not-exist-12345.com" }
+    ];
+
+    function openLinksModal() {
+      document.getElementById("linksModal").style.display = "flex";
+      checkAllLinks();
+    }
+
+    function closeLinksModal() {
+      document.getElementById("linksModal").style.display = "none";
+    }
+
+    function renderLinks() {
+      const list = document.getElementById("proxyList");
+      list.innerHTML = proxyLinks.map((link, index) => `
+        <a href="${link.url}" target="_blank" rel="noopener noreferrer" class="proxy-item">
+          <div class="proxy-info">
+            <span id="dot-${index}" class="status-dot status-checking"></span>
+            <span>${link.name}</span>
+          </div>
+          <span id="ping-${index}" class="proxy-ping">pinging...</span>
+        </a>
+      `).join("");
+    }
+
+    function pingUrl(url, timeout = 4000) {
+      return new Promise((resolve) => {
+        const start = performance.now();
+        const img = new Image();
+        let done = false;
+
+        const finish = (isUp) => {
+          if (done) return;
+          done = true;
+          const ms = Math.round(performance.now() - start);
+          resolve({ isUp, ms });
+        };
+
+        const timer = setTimeout(() => finish(false), timeout);
+
+        img.onload = () => {
+          clearTimeout(timer);
+          finish(true);
+        };
+        img.onerror = () => {
+          clearTimeout(timer);
+          const elapsed = performance.now() - start;
+          finish(elapsed > 40 && elapsed < timeout);
+        };
+
+        img.src = url.replace(/\/$/, "") + "/favicon.ico?_=" + Date.now();
+      });
+    }
+
+    async function checkAllLinks() {
+      renderLinks();
+      proxyLinks.forEach(async (link, index) => {
+        const result = await pingUrl(link.url);
+        const dot = document.getElementById(`dot-${index}`);
+        const pingText = document.getElementById(`ping-${index}`);
+
+        if (!dot || !pingText) return;
+
+        dot.classList.remove("status-checking");
+        if (result.isUp) {
+          dot.classList.add("status-up");
+          pingText.textContent = `${result.ms} ms`;
+        } else {
+          dot.classList.add("status-down");
+          pingText.textContent = "down / blocked";
+        }
+      });
+    }
+  </script>
 </body>
 </html>
